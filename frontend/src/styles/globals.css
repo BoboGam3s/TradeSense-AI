@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-white antialiased;
+  }
+}
+
+@layer components {
+  /* Glass morphism effect */
+  .glass {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
+
+  .glass-card {
+    @apply glass rounded-xl p-6 shadow-xl transition-all duration-300 hover:bg-white/10;
+  }
+
+  /* Neon glow buttons */
+  .btn-primary {
+    @apply bg-gradient-to-r from-neon-green to-green-400 text-dark-bg font-bold py-3 px-6 rounded-lg 
+    transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-neon-green/50;
+  }
+
+  .btn-secondary {
+    @apply glass text-white font-semibold py-3 px-6 rounded-lg 
+    transition-all duration-300 hover:bg-white/10 border border-neon-blue/30 hover:border-neon-blue;
+  }
+
+  .btn-danger {
+    @apply bg-gradient-to-r from-neon-red to-red-400 text-white font-bold py-3 px-6 rounded-lg 
+    transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-neon-red/50;
+  }
+
+  /* Input fields */
+  .input-field {
+    @apply glass w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-neon-blue/50 
+    transition-all duration-300 text-white placeholder-gray-400;
+  }
+
+  /* Trading card */
+  .trading-card {
+    @apply glass-card hover:border-neon-blue/50 cursor-pointer group;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply glass rounded-lg p-4;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-neon-green via-neon-blue to-neon-purple bg-clip-text text-transparent;
+  }
+
+  /* Profit/Loss indicators */
+  .profit-badge {
+    @apply bg-profit/20 text-profit px-3 py-1 rounded-full text-sm font-semibold;
+  }
+
+  .loss-badge {
+    @apply bg-loss/20 text-loss px-3 py-1 rounded-full text-sm font-semibold;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+  }
+
+  .glow-red {
+    box-shadow: 0 0 20px rgba(255, 0, 85, 0.3);
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(0, 136, 255, 0.3);
+  }
+
+  .text-gold {
+    @apply text-[#FFD700];
+  }
+
+  .bg-gold-gradient {
+    background: linear-gradient(135deg, #BF953F 0%, #FCF6BA 45%, #B38728 100%);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #12141a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e2128;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2d35;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out forwards;
+}

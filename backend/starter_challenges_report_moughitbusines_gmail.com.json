@@ -1,0 +1,114 @@
+{
+  "user": {
+    "id": 13,
+    "full_name": "Moughit",
+    "email": "moughitbusines@gmail.com"
+  },
+  "starter_challenges": [
+    {
+      "challenge": {
+        "id": 14,
+        "user_id": 13,
+        "plan_type": "starter",
+        "initial_balance": 5000.0,
+        "current_equity": 542.0,
+        "status": "failed",
+        "max_daily_loss_percent": 5.0,
+        "max_total_loss_percent": 10.0,
+        "profit_target_percent": 10.0,
+        "created_at": "2025-12-24 15:47:49.078696",
+        "completed_at": "2025-12-24 15:52:11.504759"
+      },
+      "trades": [
+        {
+          "id": 199,
+          "challenge_id": 14,
+          "symbol": "ATW",
+          "action": "buy",
+          "quantity": 10.0,
+          "price": 445.8,
+          "profit_loss": 0.0,
+          "timestamp": "2025-12-24 15:52:11.493711"
+        }
+      ],
+      "profit": -4458.0,
+      "profit_percent": -89.16
+    },
+    {
+      "challenge": {
+        "id": 15,
+        "user_id": 13,
+        "plan_type": "starter",
+        "initial_balance": 5000.0,
+        "current_equity": 9270.2075,
+        "status": "passed",
+        "max_daily_loss_percent": 5.0,
+        "max_total_loss_percent": 10.0,
+        "profit_target_percent": 10.0,
+        "created_at": "2025-12-24 15:54:19.787397",
+        "completed_at": "2025-12-24 16:07:11.396911"
+      },
+      "trades": [
+        {
+          "id": 200,
+          "challenge_id": 15,
+          "symbol": "AAPL",
+          "action": "buy",
+          "quantity": 1.05,
+          "price": 178.85,
+          "profit_loss": 0.0,
+          "timestamp": "2025-12-24 16:02:15.437872"
+        },
+        {
+          "id": 201,
+          "challenge_id": 15,
+          "symbol": "ATW",
+          "action": "sell",
+          "quantity": 10.0,
+          "price": 445.8,
+          "profit_loss": 44.58,
+          "timestamp": "2025-12-24 16:07:11.384345"
+        }
+      ],
+      "profit": 4270.2075,
+      "profit_percent": 85.40415000000002
+    },
+    {
+      "challenge": {
+        "id": 17,
+        "user_id": 13,
+        "plan_type": "starter",
+        "initial_balance": 5000.0,
+        "current_equity": 56409.4515,
+        "status": "passed",
+        "max_daily_loss_percent": 5.0,
+        "max_total_loss_percent": 10.0,
+        "profit_target_percent": 10.0,
+        "created_at": "2025-12-24 16:22:32.572421",
+        "completed_at": "2025-12-26 17:20:54.452481"
+      },
+      "trades": [
+        {
+          "id": 203,
+          "challenge_id": 17,
+          "symbol": "BTC-USD",
+          "action": "sell",
+          "quantity": 1.21,
+          "price": 42487.15,
+          "profit_loss": 514.094515,
+          "timestamp": "2025-12-26 17:20:54.443681"
+        }
+      ],
+      "profit": 51409.4515,
+      "profit_percent": 1028.18903
+    }
+  ],
+  "summary": {
+    "total_challenges": 3,
+    "total_trades": 4,
+    "total_profit": 51221.659,
+    "passed_count": 2,
+    "failed_count": 1
+  },
+  "generated_at": "2025-12-28T21:45:19.759678"
+}
