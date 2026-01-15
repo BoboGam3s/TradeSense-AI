@@ -33,16 +33,27 @@ def create_app(config_class=Config):
     
     # Create database directory if it's a SQLite URL
     db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
-    if db_url.startswith('sqlite:///'):
-        db_path = db_url.replace('sqlite:///', '')
-        # Handle instance folder or subdirectories
-        db_dir = os.path.dirname(db_path)
+    if db_url and db_url.startswith('sqlite:///'):
+        # Extract the path part
+        db_path_part = db_url.replace('sqlite:///', '')
+        
+        # If it's a relative path, make it absolute relative to the backend root
+        if not os.path.isabs(db_path_part):
+            # app.root_path is backend/app, we want to be in backend/
+            base_dir = os.path.abspath(os.path.join(app.root_path, '..'))
+            abs_db_path = os.path.abspath(os.path.join(base_dir, db_path_part))
+            app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{abs_db_path}'
+            print(f"DEBUG: Resolved absolute DB path: {abs_db_path}")
+            db_path_part = abs_db_path
+        
+        # Ensure directory exists
+        db_dir = os.path.dirname(db_path_part)
         if db_dir and not os.path.exists(db_dir):
             try:
                 os.makedirs(db_dir, exist_ok=True)
-                print(f"Created database directory: {db_dir}")
+                print(f"DEBUG: Created database directory: {db_dir}")
             except Exception as e:
-                print(f"Warning: Could not create database directory {db_dir}: {e}")
+                print(f"ERROR: Could not create database directory {db_dir}: {e}")
 
     # Create database tables and seed admin if empty
     with app.app_context():
