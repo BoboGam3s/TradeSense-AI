@@ -44,17 +44,23 @@ def mock_payment():
     if plan_type not in PLAN_PRICING:
         return jsonify({'error': 'Invalid plan type'}), 400
     
-    # Validate expiration date if card payment
+    # Validate payment-specific fields
     payment_method = data.get('payment_method', 'card')
+    
+    # Only validate card expiry for card payments
     if payment_method == 'card':
         billing_info = data.get('billing_info', {})
         card_expiry = billing_info.get('card_expiry')
         
+        # Only validate if expiry is provided
         if card_expiry:
             from app.utils.validators import validate_expiry_date
             is_valid, error_msg = validate_expiry_date(card_expiry)
             if not is_valid:
-                return jsonify({'error': f'Invalid card expiration: {error_msg}'}), 400
+                return jsonify({
+                    'error': f'Erreur de carte: {error_msg}',
+                    'details': 'Veuillez vérifier la date d\'expiration de votre carte'
+                }), 400
     
     user = User.query.get(user_id)
     

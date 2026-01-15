@@ -23,17 +23,17 @@ Remplissez les informations suivantes :
 - **Root Directory** : `backend` <-- **TRÈS IMPORTANT**
 - **Language** : `Python`
 - **Build Command** : `pip install -r requirements.txt`
-- **Start Command** : `gunicorn -b 0.0.0.0:$PORT run:app`
+- **Start Command** : `gunicorn --workers=1 --timeout 120 --log-level debug -b 0.0.0.0:$PORT run:app`
 
 ### 4. Ajouter les Variables d'Environnement
 
 Cliquez sur le bouton **"Advanced"** ou allez dans l'onglet **"Environment"** et ajoutez les clés de votre fichier `.env` actuel :
 
-- `SECRET_KEY` : (votre clé secrète)
-- `JWT_SECRET_KEY` : (votre clé JWT)
-- `DATABASE_URL` : `sqlite:///instance/tradesense.db` (en gratuit, SQLite est plus simple)
+- `SECRET_KEY` : (choisissez un mot de passe complexe)
+- `JWT_SECRET_KEY` : (choisissez un autre mot de passe complexe)
+- `DATABASE_URL` : `sqlite:////tmp/tradesense.db` (IMPÉRATIF : Utilisez /tmp pour éviter les erreurs de permission et "database is locked")
 - `GOOGLE_API_KEY` : (votre clé Gemini)
-- `PYTHON_VERSION` : `3.13.0`
+- `PYTHON_VERSION` : `3.10.12` (Render gère mieux 3.10 que 3.13 pour l'instant)
 
 ### 5. Lancer le déploiement
 

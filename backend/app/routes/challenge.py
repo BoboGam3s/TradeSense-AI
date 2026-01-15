@@ -46,37 +46,49 @@ def get_challenge_history():
 @bp.route('/leaderboard', methods=['GET'])
 def get_leaderboard():
     """Get top 10 traders by profit percentage"""
-    # Get all active and passed challenges
-    challenges = Challenge.query.filter(
-        Challenge.status.in_(['active', 'passed'])
-    ).all()
-    
-    # Calculate profit % and sort
-    leaderboard_data = []
-    for challenge in challenges:
-        user = User.query.get(challenge.user_id)
-        if user:
+    try:
+        # Get all active and passed challenges with their users in a single query
+        # We group by user to only show their best challenge
+        from sqlalchemy import func
+        
+        # Subquery to find the max current_equity per user_id for active/passed challenges
+        subquery = db.session.query(
+            Challenge.user_id,
+            func.max(Challenge.current_equity).label('max_equity')
+        ).filter(
+            Challenge.status.in_(['active', 'passed'])
+        ).group_by(Challenge.user_id).subquery()
+
+        # Join with User and Challenge to get the full data
+        results = db.session.query(User, Challenge)\
+            .join(Challenge, User.id == Challenge.user_id)\
+            .join(subquery, (Challenge.user_id == subquery.c.user_id) & (Challenge.current_equity == subquery.c.max_equity))\
+            .filter(Challenge.status.in_(['active', 'passed']))\
+            .order_by(desc(Challenge.current_equity))\
+            .limit(10)\
+            .all()
+        
+        leaderboard_data = []
+        for idx, (user, challenge) in enumerate(results, start=1):
             profit_percent = challenge.calculate_profit_percent()
             leaderboard_data.append({
-                'rank': 0,  # Will be set after sorting
+                'rank': idx,
                 'user_name': user.full_name,
                 'profit_percent': round(profit_percent, 2),
                 'total_profit': round(challenge.calculate_total_profit(), 2),
                 'plan_type': challenge.plan_type,
                 'status': challenge.status
             })
-    
-    # Sort by profit percentage
-    leaderboard_data.sort(key=lambda x: x['profit_percent'], reverse=True)
-    
-    # Assign ranks
-    for idx, entry in enumerate(leaderboard_data[:10], start=1):
-        entry['rank'] = idx
-    
-    return jsonify({
-        'leaderboard': leaderboard_data[:10],
-        'total_traders': len(leaderboard_data)
-    }), 200
+        
+        return jsonify({
+            'leaderboard': leaderboard_data,
+            'total_traders': len(leaderboard_data)
+        }), 200
+    except Exception as e:
+        import traceback
+        print(f"Error in leaderboard: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to load leaderboard', 'details': str(e)}), 500
 
 
 @bp.route('/verify/<int:challenge_id>', methods=['POST'])

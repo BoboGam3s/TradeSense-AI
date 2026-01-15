@@ -4,7 +4,17 @@
  */
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tradesense-backend-q2ul.onrender.com'
+// Base URL for API requests
+let API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tradesense-backend-q2ul.onrender.com';
+
+// Local dev override
+if (typeof window !== 'undefined') {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    if (!process.env.NEXT_PUBLIC_API_URL) {
+      API_URL = 'http://localhost:5000';
+    }
+  }
+}
 
 // Create axios instance
 const api = axios.create({

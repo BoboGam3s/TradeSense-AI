@@ -20,21 +20,30 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     migrate.init_app(app, db)
     # Enable CORS for all routes and origins
-   # Configure CORS to handle preflight OPTIONS requests properly
+    # Configure CORS to handle preflight OPTIONS requests properly
     CORS(app, 
          resources={
              r"/*": {
-                 "origins": "*",
+                 "origins": ["http://localhost:3000", "http://127.0.0.1:3000", "*.onrender.com", "*.vercel.app"],
                  "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                  "allow_headers": ["Content-Type", "Authorization"],
                  "expose_headers": ["Content-Type", "Authorization"],
                  "max_age": 3600
              }
          },
-         send_wildcard=True,
+         supports_credentials=True,
+         send_wildcard=False, # Must be False for credentials with specific origins
          always_send=True,
-         automatic_options=True  # Automatically handle OPTIONS preflight requests
+         automatic_options=True
     )
+    
+    @app.after_request
+    def after_request(response):
+        # Additional debug logging for CORS
+        if os.environ.get('FLASK_DEBUG') == '1' and request.method == 'OPTIONS':
+            print(f"DEBUG: Handling preflight {request.method} {request.path}")
+            print(f"DEBUG: Origin: {request.headers.get('Origin')}")
+        return response
     
     
     # Register blueprints

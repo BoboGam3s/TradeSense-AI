@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { tradingAPI, marketAPI, challengeAPI, authAPI } from '../../lib/api';
 import { AuthService } from '../../lib/auth';
 import { FiTrendingUp, FiDollarSign, FiActivity, FiBriefcase,
-  FiLogOut, FiShoppingCart, FiRefreshCw, FiUser, FiFilter, FiMessageSquare, FiCheck, FiPlayCircle, FiLock, FiShield, FiBell, FiPieChart, FiX, FiAward, FiChevronDown
+  FiLogOut, FiShoppingCart, FiRefreshCw, FiUser, FiFilter, FiMessageSquare, FiCheck, FiPlayCircle, FiLock, FiShield, FiBell, FiPieChart, FiX, FiAward, FiChevronDown, FiAlertTriangle
 } from 'react-icons/fi';
 import NewsFeed from '../../components/NewsFeed';
 import TradingChart from '../../components/TradingChart';
@@ -1108,6 +1108,22 @@ export default function DashboardPage() {
                         </span>
                       </div>
                     </div>
+
+                    {challenge?.status === 'failed' && (
+                      <div className="absolute inset-0 bg-dark-bg/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-500 border-2 border-red-500/20 rounded-2xl">
+                        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-red-500/20 border border-red-500/20">
+                          <FiAlertTriangle className="text-red-500 text-5xl animate-pulse" />
+                        </div>
+                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-3">Compte Bloqué</h3>
+                        <div className="bg-red-500/5 border border-red-500/10 p-4 rounded-xl mb-8 max-w-[280px]">
+                          <p className="text-red-400 text-[10px] font-black uppercase tracking-widest mb-1">Raison de l'échec:</p>
+                          <p className="text-white text-sm font-bold leading-tight">{challenge.failure_reason || "Limite de risque atteinte"}</p>
+                        </div>
+                        <Link href="/pricing" className="w-full py-5 bg-gradient-to-r from-red-600 to-rose-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-500/30 border-b-4 border-red-800">
+                          RÉINITIALISER / NOUVEAU PLAN
+                        </Link>
+                      </div>
+                    )}
                   </div>
 
                   <button 
@@ -1278,7 +1294,16 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex flex-col border-l border-white/5 pl-8">
                   <span className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-1">Niveau de Marge</span>
-                  <span className={`text-base font-black font-mono ${marginLevel >= 100 ? 'text-green-400' : 'text-red-400'}`}>{marginLevel > 0 ? `${marginLevel.toFixed(2)}%` : '--'}</span>
+                  <span className={`text-base font-black font-mono ${
+                    marginLevel === 0 ? 'text-gray-500' :
+                    marginLevel > 500 ? 'text-green-400' :
+                    marginLevel > 200 ? 'text-emerald-400' :
+                    marginLevel > 150 ? 'text-yellow-400' :
+                    marginLevel > 110 ? 'text-orange-500' :
+                    'text-red-500 animate-pulse'
+                  }`}>
+                    {marginLevel > 0 ? `${marginLevel.toFixed(2)}%` : '--'}
+                  </span>
                 </div>
               </div>
             </div>

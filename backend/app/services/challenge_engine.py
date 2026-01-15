@@ -37,6 +37,7 @@ class ChallengeEngine:
              daily_check = cls._check_daily_loss(challenge, max_daily_loss)
              if daily_check['violated']:
                  challenge.status = 'failed'
+                 challenge.failure_reason = f'Daily loss limit exceeded ({daily_check["loss_percent"]:.2f}%)'
                  challenge.completed_at = datetime.utcnow()
                  db.session.commit()
                  return {
@@ -46,23 +47,31 @@ class ChallengeEngine:
                  }
         
         # Rule 2: Check Total Loss
-        # Modified: Only fail if equity hits ZERO or below (Complete Blown Account)
-        # OR if it's a funded account, enforce standard rules
         total_loss_check = cls._check_total_loss(challenge, max_total_loss)
         
-        # For Challenge accounts, only fail if blown (equity <= 0)
-        is_blown = challenge.current_equity <= 1.0 # Buffer for near-zero
+        # Stricter Enforcement (User Request):
+        # Fail if equity hits ZERO (Blown) OR if total loss limit is exceeded
+        is_blown = challenge.current_equity <= 1.0
+        limit_violated = total_loss_check['violated']
         
-        should_fail_total = total_loss_check['violated'] if challenge.plan_type == 'funded' else is_blown
+        # Enforce for all paid plans. Free plan is more lenient but still fails if blown.
+        should_fail_total = limit_violated if challenge.plan_type != 'free' else is_blown
         
         if should_fail_total:
             challenge.status = 'failed'
+            
+            reason = f'Account blown' if is_blown else f'Total loss limit exceeded ({total_loss_check["loss_percent"]:.2f}%)'
+            if challenge.plan_type != 'free' and not is_blown:
+                reason += f" (Limit: {max_total_loss}%)"
+            
+            challenge.failure_reason = reason
             challenge.completed_at = datetime.utcnow()
             db.session.commit()
+            
             return {
                 'status': 'failed',
-                'reason': f'Account blown (Equity reached 0) or Limit Exceeded' if is_blown else f'Total loss limit exceeded ({total_loss_check["loss_percent"]:.2f}%)',
-                'action_taken': 'Challenge marked as FAILED'
+                'reason': reason,
+                'action_taken': 'Challenge marked as FAILED - New subscription required'
             }
         
         # Rule 3: Check Profit Target

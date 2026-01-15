@@ -66,9 +66,10 @@ def execute_trade():
         
     if challenge.status != 'active':
         return jsonify({
-            'error': f'Challenge {challenge.status}. Veuillez le réinitialiser pour continuer.',
-            'challenge_status': challenge.status
-        }), 400
+            'error': f'Challenge {challenge.status.upper()}. Trading is suspended.',
+            'challenge_status': challenge.status,
+            'message': 'Please reset your account or upgrade your plan to continue trading.'
+        }), 403
         
     is_open, market_msg = MarketDataService.is_market_open(symbol)
     if not is_open:

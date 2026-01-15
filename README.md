@@ -1,4 +1,4 @@
-# TradeSense AI - Prop Trading Platform
+# TradeSense AI - Prop Trading Platform 🚀
 
 <div align="center">
 

@@ -42,10 +42,10 @@ git commit -m "Initial commit: TradeSense AI Platform complete"
 
 ### 5. Lier votre projet local à GitHub
 
-Copiez l'URL de votre dépôt GitHub (ex: `https://github.com/votre-nom/TradeSense-AI.git`) et exécutez :
+Copiez l'URL de votre dépôt GitHub (ex: `https://github.com/BoboGam3s/TradeSense-AI.git`) et exécutez :
 
 ```bash
-git remote add origin https://github.com/votre-nom/TradeSense-AI.git
+git remote add origin https://github.com/BoboGam3s/TradeSense-AI.git
 git branch -M main
 ```
 
@@ -54,6 +54,54 @@ git branch -M main
 ```bash
 git push -u origin main
 ```
+
+---
+
+## �️ Résolution des Erreurs (Fix)
+
+### Si vous avez l'erreur "HTTP 408" (Timeout)
+
+Cette erreur arrive car le projet contient des vidéos (`.mp4`) qui sont lourdes, et la connexion avec GitHub expire.
+
+1. **Augmenter la taille du tampon Git (Buffer) :**
+   Exécutez cette commande pour permettre des envois plus gros :
+
+```bash
+git config --global http.postBuffer 524288000
+```
+
+2.  **Réessayer le Push :**
+
+```bash
+git push -u origin main
+```
+
+3.  **Si ça bloque toujours :**
+
+    ### Si vous avez l'erreur "File is too large" (> 100 Mo)
+
+    GitHub limite les fichiers individuels à 100 Mo. Pour vos vidéos, nous utilisons **Git LFS (Large File Storage)**.
+
+    1.  **Initialiser Git LFS :**
+
+    ```bash
+    git lfs install
+    ```
+
+    2.  **Suivre les fichiers lourds :**
+
+    ```bash
+    git lfs track "frontend/public/videos/*.mp4"
+    ```
+
+    3.  **Ajouter les fichiers et pousser :**
+
+    ```bash
+    git add .gitattributes
+    git add frontend/public/videos/*.mp4
+    git commit -m "Add large video files using Git LFS"
+    git push
+    ```
 
 ---
 

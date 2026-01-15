@@ -83,6 +83,7 @@ class Challenge(db.Model):
     profit_target_percent = db.Column(db.Float, default=10.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)
+    failure_reason = db.Column(db.String(255), nullable=True)
     
     # Relationships
     trades = db.relationship('Trade', backref='challenge', lazy=True, cascade='all, delete-orphan')
@@ -111,6 +112,7 @@ class Challenge(db.Model):
             'max_daily_loss_percent': self.max_daily_loss_percent,
             'max_total_loss_percent': self.max_total_loss_percent,
             'profit_target_percent': self.profit_target_percent,
+            'failure_reason': self.failure_reason,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'completed_at': self.completed_at.isoformat() if self.completed_at else None
         }
