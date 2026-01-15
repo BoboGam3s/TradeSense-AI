@@ -19,7 +19,9 @@ def create_app(config_class=Config):
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    # Enable CORS for all routes and origins
+    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    
     
     # Register blueprints
     app.register_blueprint(auth.bp, url_prefix='/api/auth')
@@ -104,20 +106,20 @@ def create_app(config_class=Config):
             print("CRITICAL: Application starting WITHOUT database connection to prevent crash.")
     
     # Start background scheduler for challenge verification
-    if not scheduler.running:
-        try:
-            scheduler.start()
-            # Add job to verify challenges every 5 minutes
-            from app.services.challenge_engine import verify_all_active_challenges
-            scheduler.add_job(
-                id='verify_challenges',
-                func=verify_all_active_challenges,
-                trigger='interval',
-                minutes=5,
-                replace_existing=True
-            )
-        except Exception as e:
-            print(f"WARNING: Scheduler failed to start: {e}")
+    # if not scheduler.running:
+    #     try:
+    #         scheduler.start()
+    #         # Add job to verify challenges every 5 minutes
+    #         from app.services.challenge_engine import verify_all_active_challenges
+    #         scheduler.add_job(
+    #             id='verify_challenges',
+    #             func=verify_all_active_challenges,
+    #             trigger='interval',
+    #             minutes=5,
+    #             replace_existing=True
+    #         )
+    #     except Exception as e:
+    #         print(f"WARNING: Scheduler failed to start: {e}")
     
     @app.route('/api/health')
     def health_check():
