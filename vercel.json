@@ -7,8 +7,8 @@
     }
   ],
   "functions": {
-    "api/*.py": {
-      "runtime": "vercel-python@0.8.4"
+    "api/index.py": {
+      "runtime": "@vercel/python"
     }
   }
 }
