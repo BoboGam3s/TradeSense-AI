@@ -12,6 +12,12 @@ backend/*.pyc
 backend/.pytest_cache/
 backend/instance/
 backend/logs/
+backend/*.py
+!backend/run.py
+!backend/populate_leaderboard.py
+!backend/setup_local_dev.py
+backend/scripts/
+!backend/app/
 
 # Frontend
 frontend/node_modules/

@@ -1,11 +1,12 @@
 """
-TradeSense AI - Authentication Routes
+TradeSense AI - Authentication Routes (MongoDB Version)
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app.models import User, Challenge
-from app.extensions import db
-from flask import current_app
+from app.extensions import mongo
+from bson import ObjectId
+from datetime import datetime, timedelta
 
 bp = Blueprint('auth', __name__)
 
@@ -22,7 +23,7 @@ def register():
             return jsonify({'error': f'Missing required field: {field}'}), 400
     
     # Check if user exists
-    if User.query.filter_by(email=data['email']).first():
+    if mongo.db.users.find_one({'email': data['email']}):
         return jsonify({'error': 'Email already registered'}), 409
     
     # Create new user with free plan
@@ -30,35 +31,35 @@ def register():
         email=data['email'],
         full_name=data['full_name'],
         language=data.get('language', 'fr'),
-        plan_type='free'  # Auto-assign free plan
+        plan_type='free'
     )
     user.set_password(data['password'])
     
     # Generate verification token
-    from datetime import datetime, timedelta
     from app.services.email_service import EmailService
     user.verification_token = EmailService.generate_token()
     user.verification_token_expires = datetime.utcnow() + timedelta(hours=24)
     
-    db.session.add(user)
-    db.session.flush()  # Get user ID before creating challenge
+    # Insert user to get ID
+    user_data = user.to_dict_for_db()
+    result = mongo.db.users.insert_one(user_data)
+    user.id = str(result.inserted_id)
     
     # Auto-create a free challenge for new users
     free_challenge = Challenge(
         user_id=user.id,
         plan_type='free',
-        initial_balance=500,  # Free plan has 500$ capital
+        initial_balance=500,
         current_equity=500,
         status='active',
         max_daily_loss_percent=5,
         max_total_loss_percent=10,
-        profit_target_percent=5  # 5% profit target for free plan
+        profit_target_percent=5
     )
     
-    db.session.add(free_challenge)
-    db.session.commit()
+    mongo.db.challenges.insert_one(free_challenge.to_dict())
     
-    # Send verification email (optional - doesn't block registration)
+    # Send verification email
     try:
         verification_url = f"{current_app.config.get('FRONTEND_URL', 'http://localhost:3000')}/verify-email?token={user.verification_token}"
         EmailService.send_verification_email(user, verification_url)
@@ -84,9 +85,12 @@ def login():
     if not data.get('email') or not data.get('password'):
         return jsonify({'error': 'Email and password required'}), 400
     
-    user = User.query.filter_by(email=data['email']).first()
+    user_doc = mongo.db.users.find_one({'email': data['email']})
+    if not user_doc:
+        return jsonify({'error': 'Invalid email or password'}), 401
     
-    if not user or not user.check_password(data['password']):
+    user = User(**user_doc)
+    if not user.check_password(data['password']):
         return jsonify({'error': 'Invalid email or password'}), 401
     
     access_token = create_access_token(identity=str(user.id))
@@ -102,17 +106,14 @@ def login():
 @jwt_required()
 def complete_onboarding():
     """Mark onboarding as completed for the current user"""
-    from flask import current_app
-    import logging
-    
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    mongo.db.users.update_one(
+        {'_id': ObjectId(current_user_id)},
+        {'$set': {'has_completed_onboarding': True}}
+    )
     
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-        
-    user.has_completed_onboarding = True
-    db.session.commit()
+    user_doc = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
+    user = User(**user_doc)
     
     return jsonify({
         'message': 'Onboarding completed',
@@ -125,11 +126,12 @@ def complete_onboarding():
 def get_current_user():
     """Get current user profile"""
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user_doc = mongo.db.users.find_one({'_id': ObjectId(user_id)})
     
-    if not user:
+    if not user_doc:
         return jsonify({'error': 'User not found'}), 404
     
+    user = User(**user_doc)
     return jsonify({'user': user.to_dict()}), 200
 
 
@@ -138,26 +140,27 @@ def get_current_user():
 def update_profile():
     """Update user profile"""
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
     data = request.get_json()
     
-    # Update allowed fields
-    if 'full_name' in data:
-        user.full_name = data['full_name']
-    if 'phone' in data:
-        user.phone = data['phone']
-    if 'bio' in data:
-        user.bio = data['bio']
-    if 'avatar_url' in data:
-        user.avatar_url = data['avatar_url']
-    if 'language' in data:
-        user.language = data['language']
+    update_data = {}
+    allowed_fields = ['full_name', 'phone', 'bio', 'avatar_url', 'language']
+    for field in allowed_fields:
+        if field in data:
+            update_data[field] = data[field]
     
-    db.session.commit()
+    if not update_data:
+        return jsonify({'error': 'No fields to update'}), 400
+
+    result = mongo.db.users.update_one(
+        {'_id': ObjectId(user_id)},
+        {'$set': update_data}
+    )
+    
+    if result.matched_count == 0:
+        return jsonify({'error': 'User not found'}), 404
+    
+    user_doc = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+    user = User(**user_doc)
     
     return jsonify({
         'message': 'Profile updated successfully',
@@ -170,23 +173,24 @@ def update_profile():
 def change_password():
     """Change user password"""
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
     data = request.get_json()
     
     if not data.get('current_password') or not data.get('new_password'):
         return jsonify({'error': 'Current and new password required'}), 400
     
-    # Verify current password
+    user_doc = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+    if not user_doc:
+        return jsonify({'error': 'User not found'}), 404
+    
+    user = User(**user_doc)
     if not user.check_password(data['current_password']):
         return jsonify({'error': 'Current password incorrect'}), 401
     
-    # Update password
     user.set_password(data['new_password'])
-    db.session.commit()
+    mongo.db.users.update_one(
+        {'_id': ObjectId(user_id)},
+        {'$set': {'password_hash': user.password_hash}}
+    )
     
     return jsonify({'message': 'Password changed successfully'}), 200
 
@@ -196,16 +200,11 @@ def change_password():
 def get_user_stats():
     """Get user statistics"""
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
     
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    # Calculate stats from challenges
-    total_challenges = Challenge.query.filter_by(user_id=user_id).count()
-    passed_challenges = Challenge.query.filter_by(user_id=user_id, status='passed').count()
-    failed_challenges = Challenge.query.filter_by(user_id=user_id, status='failed').count()
-    active_challenges = Challenge.query.filter_by(user_id=user_id, status='active').count()
+    total_challenges = mongo.db.challenges.count_documents({'user_id': user_id})
+    passed_challenges = mongo.db.challenges.count_documents({'user_id': user_id, 'status': 'passed'})
+    failed_challenges = mongo.db.challenges.count_documents({'user_id': user_id, 'status': 'failed'})
+    active_challenges = mongo.db.challenges.count_documents({'user_id': user_id, 'status': 'active'})
     
     success_rate = (passed_challenges / total_challenges * 100) if total_challenges > 0 else 0
     
@@ -218,26 +217,24 @@ def get_user_stats():
             'success_rate': round(success_rate, 2)
         }
     }), 200
+
+
 @bp.route('/academy-progress', methods=['PUT'])
 @jwt_required()
 def update_academy_progress():
     """Update user academy progression"""
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
     data = request.get_json()
     if 'progress' not in data:
         return jsonify({'error': 'Progress data required'}), 400
         
-    user.academy_progress = data['progress']
-    db.session.commit()
+    mongo.db.users.update_one(
+        {'_id': ObjectId(user_id)},
+        {'$set': {'academy_progress': data['progress']}}
+    )
     
     return jsonify({
-        'message': 'Academy progress updated successfully',
-        'progress': user.academy_progress
+        'message': 'Academy progress updated successfully'
     }), 200
 
 
@@ -245,25 +242,25 @@ def update_academy_progress():
 def verify_email():
     """Verify user email with token"""
     data = request.get_json()
-    
     if not data.get('token'):
         return jsonify({'error': 'Verification token required'}), 400
     
-    user = User.query.filter_by(verification_token=data['token']).first()
-    
-    if not user:
+    user_doc = mongo.db.users.find_one({'verification_token': data['token']})
+    if not user_doc:
         return jsonify({'error': 'Invalid verification token'}), 404
     
-    # Check if token is expired
-    from datetime import datetime
+    user = User(**user_doc)
     if user.verification_token_expires and user.verification_token_expires < datetime.utcnow():
         return jsonify({'error': 'Verification token expired'}), 400
     
-    # Verify user
-    user.email_verified = True
-    user.verification_token = None
-    user.verification_token_expires = None
-    db.session.commit()
+    mongo.db.users.update_one(
+        {'_id': ObjectId(user.id)},
+        {'$set': {
+            'email_verified': True,
+            'verification_token': None,
+            'verification_token_expires': None
+        }}
+    )
     
     return jsonify({'message': 'Email verified successfully'}), 200
 
@@ -273,22 +270,27 @@ def verify_email():
 def resend_verification():
     """Resend verification email"""
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user_doc = mongo.db.users.find_one({'_id': ObjectId(user_id)})
     
-    if not user:
+    if not user_doc:
         return jsonify({'error': 'User not found'}), 404
     
+    user = User(**user_doc)
     if user.email_verified:
         return jsonify({'message': 'Email already verified'}), 200
     
-    # Generate new token
-    from datetime import datetime, timedelta
     from app.services.email_service import EmailService
     user.verification_token = EmailService.generate_token()
     user.verification_token_expires = datetime.utcnow() + timedelta(hours=24)
-    db.session.commit()
     
-    # Send email
+    mongo.db.users.update_one(
+        {'_id': ObjectId(user_id)},
+        {'$set': {
+            'verification_token': user.verification_token,
+            'verification_token_expires': user.verification_token_expires
+        }}
+    )
+    
     try:
         verification_url = f"{current_app.config.get('FRONTEND_URL', 'http://localhost:3000')}/verify-email?token={user.verification_token}"
         EmailService.send_verification_email(user, verification_url)
@@ -302,24 +304,26 @@ def resend_verification():
 def forgot_password():
     """Request password reset"""
     data = request.get_json()
-    
     if not data.get('email'):
         return jsonify({'error': 'Email required'}), 400
     
-    user = User.query.filter_by(email=data['email']).first()
-    
-    if not user:
-        # Don't reveal if email exists or not (security best practice)
+    user_doc = mongo.db.users.find_one({'email': data['email']})
+    if not user_doc:
         return jsonify({'message': 'If that email exists, a password reset link has been sent'}), 200
     
-    # Generate reset token
-    from datetime import datetime, timedelta
+    user = User(**user_doc)
     from app.services.email_service import EmailService
     user.reset_token = EmailService.generate_token()
-    user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)  # 1 hour expiry
-    db.session.commit()
+    user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
     
-    # Send reset email (console mode)
+    mongo.db.users.update_one(
+        {'_id': ObjectId(user.id)},
+        {'$set': {
+            'reset_token': user.reset_token,
+            'reset_token_expires': user.reset_token_expires
+        }}
+    )
+    
     try:
         reset_url = f"{current_app.config.get('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token={user.reset_token}"
         EmailService.send_password_reset_email(user, reset_url)
@@ -333,29 +337,28 @@ def forgot_password():
 def reset_password():
     """Reset password with token"""
     data = request.get_json()
-    
     if not data.get('token') or not data.get('new_password'):
         return jsonify({'error': 'Token and new password required'}), 400
     
-    # Find user with this reset token
-    user = User.query.filter_by(reset_token=data['token']).first()
-    
-    if not user:
+    user_doc = mongo.db.users.find_one({'reset_token': data['token']})
+    if not user_doc:
         return jsonify({'error': 'Invalid or expired reset token'}), 404
     
-    # Check if token is expired
-    from datetime import datetime
+    user = User(**user_doc)
     if user.reset_token_expires and user.reset_token_expires < datetime.utcnow():
         return jsonify({'error': 'Reset token expired'}), 400
     
-    # Validate password length
     if len(data['new_password']) < 6:
         return jsonify({'error': 'Password must be at least 6 characters'}), 400
     
-    # Reset password
     user.set_password(data['new_password'])
-    user.reset_token = None
-    user.reset_token_expires = None
-    db.session.commit()
+    mongo.db.users.update_one(
+        {'_id': ObjectId(user.id)},
+        {'$set': {
+            'password_hash': user.password_hash,
+            'reset_token': None,
+            'reset_token_expires': None
+        }}
+    )
     
     return jsonify({'message': 'Password reset successfully'}), 200

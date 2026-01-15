@@ -1,57 +1,49 @@
 """
-TradeSense AI - Database Models
+TradeSense AI - Database Models (MongoDB Atlas Version)
 """
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.extensions import db
+from bson import ObjectId
 
+class User:
+    """User doc for authentication and profile"""
+    def __init__(self, **kwargs):
+        self.id = str(kwargs.get('_id')) if kwargs.get('_id') else kwargs.get('id')
+        self.email = kwargs.get('email')
+        self.password_hash = kwargs.get('password_hash')
+        self.full_name = kwargs.get('full_name')
+        self.phone = kwargs.get('phone')
+        self.bio = kwargs.get('bio')
+        self.avatar_url = kwargs.get('avatar_url')
+        self.role = kwargs.get('role', 'user')
+        self.plan_type = kwargs.get('plan_type')
+        self.language = kwargs.get('language', 'fr')
+        self.academy_progress = kwargs.get('academy_progress', {})
+        self.has_completed_onboarding = kwargs.get('has_completed_onboarding', False)
+        
+        # Email Verification
+        self.email_verified = kwargs.get('email_verified', False)
+        self.verification_token = kwargs.get('verification_token')
+        self.verification_token_expires = kwargs.get('verification_token_expires')
+        
+        # Password Reset
+        self.reset_token = kwargs.get('reset_token')
+        self.reset_token_expires = kwargs.get('reset_token_expires')
+        
+        self.created_at = kwargs.get('created_at', datetime.utcnow())
 
-class User(db.Model):
-    """User model for authentication and profile"""
-    __tablename__ = 'users'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
-    full_name = db.Column(db.String(100), nullable=False)
-    phone = db.Column(db.String(20), nullable=True)  # Phone number
-    bio = db.Column(db.Text, nullable=True)  # Short biography
-    avatar_url = db.Column(db.String(255), nullable=True)  # Avatar image URL
-    role = db.Column(db.String(20), default='user')  # 'user' or 'admin'
-    plan_type = db.Column(db.String(20), nullable=True)  # 'free', 'starter', 'pro', 'elite'
-    language = db.Column(db.String(5), default='fr')  # 'fr', 'en', 'ar'
-    academy_progress = db.Column(db.JSON, nullable=True)  # Store progression as JSON
-    
-    # Email Verification
-    email_verified = db.Column(db.Boolean, default=False)
-    verification_token = db.Column(db.String(100), nullable=True)
-    verification_token_expires = db.Column(db.DateTime, nullable=True)
-    
-    # Password Reset
-    reset_token = db.Column(db.String(100), nullable=True)
-    reset_token_expires = db.Column(db.DateTime, nullable=True)
-    
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    challenges = db.relationship('Challenge', backref='user', lazy=True, cascade='all, delete-orphan')
-    
     def set_password(self, password):
         """Hash and set user password"""
         self.password_hash = generate_password_hash(password)
     
     def check_password(self, password):
         """Verify password against hash"""
+        if not self.password_hash:
+            return False
         return check_password_hash(self.password_hash, password)
-    
-    # Onboarding
-    has_completed_onboarding = db.Column(db.Boolean, default=False)
 
-    def __repr__(self):
-        return f'<User {self.email}>'
-    
     def to_dict(self):
-        """Convert user to dictionary"""
+        """Convert to dict for API responses"""
         return {
             'id': self.id,
             'email': self.email,
@@ -63,43 +55,48 @@ class User(db.Model):
             'plan_type': self.plan_type,
             'language': self.language,
             'academy_progress': self.academy_progress,
+            'has_completed_onboarding': self.has_completed_onboarding,
             'email_verified': self.email_verified,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at
         }
 
+    def to_dict_for_db(self):
+        """Convert to dict for MongoDB insertion"""
+        data = self.to_dict()
+        if 'id' in data:
+            del data['id']
+        data['password_hash'] = self.password_hash
+        data['verification_token'] = self.verification_token
+        data['verification_token_expires'] = self.verification_token_expires
+        data['reset_token'] = self.reset_token
+        data['reset_token_expires'] = self.reset_token_expires
+        return data
 
-class Challenge(db.Model):
-    """Trading challenge model"""
-    __tablename__ = 'challenges'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    plan_type = db.Column(db.String(20), nullable=False)  # 'starter', 'pro', 'elite'
-    initial_balance = db.Column(db.Float, default=5000.0)
-    current_equity = db.Column(db.Float, default=5000.0)
-    status = db.Column(db.String(20), default='active')  # 'active', 'passed', 'failed'
-    max_daily_loss_percent = db.Column(db.Float, default=5.0)
-    max_total_loss_percent = db.Column(db.Float, default=10.0)
-    profit_target_percent = db.Column(db.Float, default=10.0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    completed_at = db.Column(db.DateTime, nullable=True)
-    failure_reason = db.Column(db.String(255), nullable=True)
-    
-    # Relationships
-    trades = db.relationship('Trade', backref='challenge', lazy=True, cascade='all, delete-orphan')
-    
+class Challenge:
+    """Trading challenge doc"""
+    def __init__(self, **kwargs):
+        self.id = str(kwargs.get('_id')) if kwargs.get('_id') else kwargs.get('id')
+        self.user_id = str(kwargs.get('user_id'))
+        self.plan_type = kwargs.get('plan_type', 'starter')
+        self.initial_balance = kwargs.get('initial_balance', 5000.0)
+        self.current_equity = kwargs.get('current_equity', 5000.0)
+        self.status = kwargs.get('status', 'active')
+        self.max_daily_loss_percent = kwargs.get('max_daily_loss_percent', 5.0)
+        self.max_total_loss_percent = kwargs.get('max_total_loss_percent', 10.0)
+        self.profit_target_percent = kwargs.get('profit_target_percent', 10.0)
+        self.created_at = kwargs.get('created_at', datetime.utcnow())
+        self.completed_at = kwargs.get('completed_at')
+        self.failure_reason = kwargs.get('failure_reason')
+
     def calculate_profit_percent(self):
-        """Calculate profit/loss percentage"""
         if self.initial_balance == 0:
             return 0
         return ((self.current_equity - self.initial_balance) / self.initial_balance) * 100
     
     def calculate_total_profit(self):
-        """Calculate total profit/loss in dollars"""
         return self.current_equity - self.initial_balance
-    
+
     def to_dict(self):
-        """Convert challenge to dictionary"""
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -113,36 +110,28 @@ class Challenge(db.Model):
             'max_total_loss_percent': self.max_total_loss_percent,
             'profit_target_percent': self.profit_target_percent,
             'failure_reason': self.failure_reason,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None
+            'created_at': self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at,
+            'completed_at': self.completed_at.isoformat() if isinstance(self.completed_at, datetime) else self.completed_at
         }
 
+class Trade:
+    """Trade execution doc"""
+    def __init__(self, **kwargs):
+        self.id = str(kwargs.get('_id')) if kwargs.get('_id') else kwargs.get('id')
+        self.challenge_id = str(kwargs.get('challenge_id'))
+        self.symbol = kwargs.get('symbol')
+        self.action = kwargs.get('action')
+        self.quantity = kwargs.get('quantity')
+        self.price = kwargs.get('price')
+        self.profit_loss = kwargs.get('profit_loss', 0.0)
+        self.is_open = kwargs.get('is_open', True)
+        self.close_price = kwargs.get('close_price')
+        self.notes = kwargs.get('notes')
+        self.tags = kwargs.get('tags', [])
+        self.screenshot_url = kwargs.get('screenshot_url')
+        self.timestamp = kwargs.get('timestamp', datetime.utcnow())
 
-class Trade(db.Model):
-    """Trade execution model"""
-    __tablename__ = 'trades'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    challenge_id = db.Column(db.Integer, db.ForeignKey('challenges.id'), nullable=False)
-    symbol = db.Column(db.String(20), nullable=False)  # 'AAPL', 'BTC-USD', 'IAM', etc.
-    action = db.Column(db.String(10), nullable=False)  # 'buy' or 'sell'
-    quantity = db.Column(db.Float, nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    profit_loss = db.Column(db.Float, default=0.0)
-    
-    # MT4 LOGIC: Independent orders
-    is_open = db.Column(db.Boolean, default=True)
-    close_price = db.Column(db.Float, nullable=True)
-    
-    # Trading Journal Fields
-    notes = db.Column(db.Text, nullable=True)
-    tags = db.Column(db.String(255), nullable=True)  # Comma-separated tags
-    screenshot_url = db.Column(db.String(255), nullable=True)
-    
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    
     def to_dict(self):
-        """Convert trade to dictionary"""
         return {
             'id': self.id,
             'challenge_id': self.challenge_id,
@@ -154,43 +143,40 @@ class Trade(db.Model):
             'is_open': self.is_open,
             'close_price': self.close_price,
             'notes': self.notes,
-            'tags': self.tags.split(',') if self.tags else [],
+            'tags': self.tags if isinstance(self.tags, list) else (self.tags.split(',') if self.tags else []),
             'screenshot_url': self.screenshot_url,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None
+            'timestamp': self.timestamp.isoformat() if isinstance(self.timestamp, datetime) else self.timestamp
         }
 
+class PaymentConfig:
+    """PayPal configuration storage (MongoDB)"""
+    def __init__(self, **kwargs):
+        self.id = str(kwargs.get('_id')) if kwargs.get('_id') else kwargs.get('id')
+        self.paypal_client_id = kwargs.get('paypal_client_id')
+        self.paypal_secret = kwargs.get('paypal_secret')
+        self.is_live = kwargs.get('is_live', False)
+        self.updated_at = kwargs.get('updated_at', datetime.utcnow())
 
-class PaymentConfig(db.Model):
-    """PayPal configuration storage (admin panel)"""
-    __tablename__ = 'payment_config'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    paypal_client_id = db.Column(db.String(255), nullable=True)
-    paypal_secret = db.Column(db.String(255), nullable=True)
-    is_live = db.Column(db.Boolean, default=False)  # False = sandbox, True = production
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
     def to_dict(self):
-        """Convert config to dictionary (hide secret)"""
         return {
             'id': self.id,
             'paypal_client_id': self.paypal_client_id,
             'paypal_secret': '***' if self.paypal_secret else None,
             'is_live': self.is_live,
-            'updated_at': self.updated_at.isoformat()
+            'updated_at': self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else self.updated_at
         }
 
-class PriceAlert(db.Model):
-    __tablename__ = 'price_alerts'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    symbol = db.Column(db.String(20), nullable=False)
-    target_price = db.Column(db.Float, nullable=False)
-    condition = db.Column(db.String(10), nullable=False) # 'ABOVE' or 'BELOW'
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+class PriceAlert:
+    """Price alert doc"""
+    def __init__(self, **kwargs):
+        self.id = str(kwargs.get('_id')) if kwargs.get('_id') else kwargs.get('id')
+        self.user_id = str(kwargs.get('user_id'))
+        self.symbol = kwargs.get('symbol')
+        self.target_price = kwargs.get('target_price')
+        self.condition = kwargs.get('condition') # 'ABOVE' or 'BELOW'
+        self.is_active = kwargs.get('is_active', True)
+        self.created_at = kwargs.get('created_at', datetime.utcnow())
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -199,5 +185,5 @@ class PriceAlert(db.Model):
             'target_price': self.target_price,
             'condition': self.condition,
             'is_active': self.is_active,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at
         }

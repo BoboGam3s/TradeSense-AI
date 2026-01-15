@@ -16,9 +16,8 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     
     # Initialize extensions
-    db.init_app(app)
+    mongo.init_app(app)
     jwt.init_app(app)
-    migrate.init_app(app, db)
     # Enable CORS for all routes and origins
     # Configure CORS to handle preflight OPTIONS requests properly
     CORS(app, 
@@ -56,77 +55,24 @@ def create_app(config_class=Config):
     app.register_blueprint(alerts.bp, url_prefix='/api/alerts')
     app.register_blueprint(community.bp, url_prefix='/api/community')
     
-    # Database Configuration & Fail-Safe Initialization
-    try:
-        db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
-        
-        # Only handle SQLite specifically
-        if db_url and db_url.startswith('sqlite:///'):
-            target_db_path = None
-            
-            # 1. Try to use the configured path (made absolute)
-            try:
-                raw_path = db_url.replace('sqlite:///', '')
-                if not os.path.isabs(raw_path):
-                    # Default: backend/instance/tradesense.db
-                    base_dir = os.path.dirname(app.root_path) # backend/
-                    target_db_path = os.path.abspath(os.path.join(base_dir, raw_path))
-                else:
-                    target_db_path = raw_path
-                    
-                # Try creating directory
-                db_dir = os.path.dirname(target_db_path)
-                os.makedirs(db_dir, exist_ok=True)
-                
-                # Verify write permissions
-                test_file = os.path.join(db_dir, '.write_test')
-                with open(test_file, 'w') as f: f.write('ok')
-                os.remove(test_file)
-                
-                # Apply if success
-                app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{target_db_path}'
-                print(f"DEBUG: Using primary database path: {target_db_path}")
-                
-            except Exception as e:
-                print(f"WARNING: Primary database path failed ({e}). Usage fallback.")
-                # 2. Fallback to system temp directory (Always writable on Render/Railway)
-                import tempfile
-                temp_dir = tempfile.gettempdir()
-                target_db_path = os.path.join(temp_dir, 'tradesense.db')
-                app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{target_db_path}'
-                print(f"DEBUG: Fallback to temporary database: {target_db_path}")
 
-    except Exception as e:
-        print(f"ERROR: Critical failure in DB configuration: {e}")
-        # Keep going to allow app startup
-
-    # Create database tables and seed admin if empty (FAIL-SAFE)
+    # Seeding admin if no users exist (MongoDB version)
     with app.app_context():
         try:
-            # Try to create tables
-            db.create_all()
-            print("DEBUG: Database tables created/verified successfully")
-            
-            # Seed admin if no users exist
-            try:
-                if User.query.count() == 0:
-                    print("Database is empty. Seeding admin user...")
-                    admin_user = User(
-                        email='admin@tradesense.ai',
-                        full_name='Admin User',
-                        role='admin',
-                        language='fr'
-                    )
-                    admin_user.set_password('admin123')
-                    db.session.add(admin_user)
-                    db.session.commit()
-                    print("Admin user created: admin@tradesense.ai / admin123")
-            except Exception as e_seed:
-                print(f"WARNING: Could not seed admin user: {e_seed}")
-                
+            if mongo.db.users.count_documents({}) == 0:
+                print("Database is empty. Seeding admin user...")
+                from app.models import User
+                admin_user = User(
+                    email='admin@tradesense.ai',
+                    full_name='Admin User',
+                    role='admin',
+                    language='fr'
+                )
+                admin_user.set_password('admin123')
+                mongo.db.users.insert_one(admin_user.to_dict())
+                print("Admin user created: admin@tradesense.ai / admin123")
         except Exception as e:
-            print(f"ERROR: Database initialization failed: {e}")
-            print("CRITICAL: Application starting WITHOUT database connection to prevent crash.")
+            print(f"WARNING: MongoDB initialization/seeding failed: {e}")
     
     # Start background scheduler for challenge verification
     # if not scheduler.running:

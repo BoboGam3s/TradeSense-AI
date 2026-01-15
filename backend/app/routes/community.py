@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 from app.models import User
+from app.extensions import mongo
 import random
 
 bp = Blueprint('community', __name__)
@@ -7,11 +8,12 @@ bp = Blueprint('community', __name__)
 @bp.route('/users', methods=['GET'])
 def get_community_users():
     """Get a mix of real and imaginary users for the community zone"""
-    # Get some real users
-    real_users = User.query.limit(5).all()
+    # Get some real users from MongoDB
+    cursor = mongo.db.users.find().limit(5)
     user_list = []
     
-    for user in real_users:
+    for u_doc in cursor:
+        user = User(**u_doc)
         user_list.append({
             'id': f"real_{user.id}",
             'name': user.full_name.split()[0] + "_" + str(random.randint(10, 99)),
