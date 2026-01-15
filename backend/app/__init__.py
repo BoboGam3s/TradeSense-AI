@@ -31,76 +31,93 @@ def create_app(config_class=Config):
     app.register_blueprint(alerts.bp, url_prefix='/api/alerts')
     app.register_blueprint(community.bp, url_prefix='/api/community')
     
-    # Create database directory if it's a SQLite URL
-    db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
-    if db_url and db_url.startswith('sqlite:///'):
-        db_path_part = db_url.replace('sqlite:///', '')
+    # Database Configuration & Fail-Safe Initialization
+    try:
+        db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
         
-        # Make absolute path
-        if not os.path.isabs(db_path_part):
-            # Resolve relative to the backend folder
-            backend_root = os.path.abspath(os.path.join(app.root_path, '..'))
-            abs_db_path = os.path.join(backend_root, db_path_part)
-            app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{abs_db_path}'
-            db_path_part = abs_db_path
-        
-        print(f"DEBUG: Using database at: {db_path_part}")
-        
-        # Ensure parent directory exists
-        db_dir = os.path.dirname(db_path_part)
-        if db_dir:
+        # Only handle SQLite specifically
+        if db_url and db_url.startswith('sqlite:///'):
+            target_db_path = None
+            
+            # 1. Try to use the configured path (made absolute)
             try:
+                raw_path = db_url.replace('sqlite:///', '')
+                if not os.path.isabs(raw_path):
+                    # Default: backend/instance/tradesense.db
+                    base_dir = os.path.dirname(app.root_path) # backend/
+                    target_db_path = os.path.abspath(os.path.join(base_dir, raw_path))
+                else:
+                    target_db_path = raw_path
+                    
+                # Try creating directory
+                db_dir = os.path.dirname(target_db_path)
                 os.makedirs(db_dir, exist_ok=True)
-                # Test writability
+                
+                # Verify write permissions
                 test_file = os.path.join(db_dir, '.write_test')
-                with open(test_file, 'w') as f:
-                    f.write('test')
+                with open(test_file, 'w') as f: f.write('ok')
                 os.remove(test_file)
-                print(f"DEBUG: Directory {db_dir} is writable")
+                
+                # Apply if success
+                app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{target_db_path}'
+                print(f"DEBUG: Using primary database path: {target_db_path}")
+                
             except Exception as e:
-                print(f"ERROR: Directory {db_dir} issue: {e}")
+                print(f"WARNING: Primary database path failed ({e}). Usage fallback.")
+                # 2. Fallback to system temp directory (Always writable on Render/Railway)
+                import tempfile
+                temp_dir = tempfile.gettempdir()
+                target_db_path = os.path.join(temp_dir, 'tradesense.db')
+                app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{target_db_path}'
+                print(f"DEBUG: Fallback to temporary database: {target_db_path}")
 
-    # Create database tables and seed admin if empty
+    except Exception as e:
+        print(f"ERROR: Critical failure in DB configuration: {e}")
+        # Keep going to allow app startup
+
+    # Create database tables and seed admin if empty (FAIL-SAFE)
     with app.app_context():
         try:
+            # Try to create tables
             db.create_all()
-            print("DEBUG: Database tables created successfully")
+            print("DEBUG: Database tables created/verified successfully")
+            
+            # Seed admin if no users exist
+            try:
+                if User.query.count() == 0:
+                    print("Database is empty. Seeding admin user...")
+                    admin_user = User(
+                        email='admin@tradesense.ai',
+                        full_name='Admin User',
+                        role='admin',
+                        language='fr'
+                    )
+                    admin_user.set_password('admin123')
+                    db.session.add(admin_user)
+                    db.session.commit()
+                    print("Admin user created: admin@tradesense.ai / admin123")
+            except Exception as e_seed:
+                print(f"WARNING: Could not seed admin user: {e_seed}")
+                
         except Exception as e:
-            print(f"ERROR: Failure during db.create_all(): {e}")
-            # Fallback: try using a file in /tmp if we can't write to the project dir
-            if "unable to open database file" in str(e).lower():
-                tmp_db = "/tmp/tradesense.db"
-                print(f"DEBUG: Attempting fallback to /tmp/tradesense.db")
-                app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{tmp_db}'
-                db.create_all()
-                print(f"DEBUG: Fallback database created at {tmp_db}")
-
-        # Seed admin if no users exist
-        if User.query.count() == 0:
-            print("Database is empty. Seeding admin user...")
-            admin_user = User(
-                email='admin@tradesense.ai',
-                full_name='Admin User',
-                role='admin',
-                language='fr'
-            )
-            admin_user.set_password('admin123')
-            db.session.add(admin_user)
-            db.session.commit()
-            print("Admin user created: admin@tradesense.ai / admin123")
+            print(f"ERROR: Database initialization failed: {e}")
+            print("CRITICAL: Application starting WITHOUT database connection to prevent crash.")
     
     # Start background scheduler for challenge verification
     if not scheduler.running:
-        scheduler.start()
-        # Add job to verify challenges every 5 minutes
-        from app.services.challenge_engine import verify_all_active_challenges
-        scheduler.add_job(
-            id='verify_challenges',
-            func=verify_all_active_challenges,
-            trigger='interval',
-            minutes=5,
-            replace_existing=True
-        )
+        try:
+            scheduler.start()
+            # Add job to verify challenges every 5 minutes
+            from app.services.challenge_engine import verify_all_active_challenges
+            scheduler.add_job(
+                id='verify_challenges',
+                func=verify_all_active_challenges,
+                trigger='interval',
+                minutes=5,
+                replace_existing=True
+            )
+        except Exception as e:
+            print(f"WARNING: Scheduler failed to start: {e}")
     
     @app.route('/api/health')
     def health_check():
