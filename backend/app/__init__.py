@@ -34,30 +34,47 @@ def create_app(config_class=Config):
     # Create database directory if it's a SQLite URL
     db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
     if db_url and db_url.startswith('sqlite:///'):
-        # Extract the path part
         db_path_part = db_url.replace('sqlite:///', '')
         
-        # If it's a relative path, make it absolute relative to the backend root
+        # Make absolute path
         if not os.path.isabs(db_path_part):
-            # app.root_path is backend/app, we want to be in backend/
-            base_dir = os.path.abspath(os.path.join(app.root_path, '..'))
-            abs_db_path = os.path.abspath(os.path.join(base_dir, db_path_part))
+            # Resolve relative to the backend folder
+            backend_root = os.path.abspath(os.path.join(app.root_path, '..'))
+            abs_db_path = os.path.join(backend_root, db_path_part)
             app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{abs_db_path}'
-            print(f"DEBUG: Resolved absolute DB path: {abs_db_path}")
             db_path_part = abs_db_path
         
-        # Ensure directory exists
+        print(f"DEBUG: Using database at: {db_path_part}")
+        
+        # Ensure parent directory exists
         db_dir = os.path.dirname(db_path_part)
-        if db_dir and not os.path.exists(db_dir):
+        if db_dir:
             try:
                 os.makedirs(db_dir, exist_ok=True)
-                print(f"DEBUG: Created database directory: {db_dir}")
+                # Test writability
+                test_file = os.path.join(db_dir, '.write_test')
+                with open(test_file, 'w') as f:
+                    f.write('test')
+                os.remove(test_file)
+                print(f"DEBUG: Directory {db_dir} is writable")
             except Exception as e:
-                print(f"ERROR: Could not create database directory {db_dir}: {e}")
+                print(f"ERROR: Directory {db_dir} issue: {e}")
 
     # Create database tables and seed admin if empty
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+            print("DEBUG: Database tables created successfully")
+        except Exception as e:
+            print(f"ERROR: Failure during db.create_all(): {e}")
+            # Fallback: try using a file in /tmp if we can't write to the project dir
+            if "unable to open database file" in str(e).lower():
+                tmp_db = "/tmp/tradesense.db"
+                print(f"DEBUG: Attempting fallback to /tmp/tradesense.db")
+                app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{tmp_db}'
+                db.create_all()
+                print(f"DEBUG: Fallback database created at {tmp_db}")
+
         # Seed admin if no users exist
         if User.query.count() == 0:
             print("Database is empty. Seeding admin user...")
