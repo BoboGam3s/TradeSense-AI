@@ -20,12 +20,21 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     migrate.init_app(app, db)
     # Enable CORS for all routes and origins
-    # Note: For production, consider restricting origins to your specific domains
+   # Configure CORS to handle preflight OPTIONS requests properly
     CORS(app, 
-         resources={r"/*": {"origins": "*"}},
-         allow_headers=["Content-Type", "Authorization"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         supports_credentials=False)  # Changed to False to allow wildcard origin
+         resources={
+             r"/*": {
+                 "origins": "*",
+                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                 "allow_headers": ["Content-Type", "Authorization"],
+                 "expose_headers": ["Content-Type", "Authorization"],
+                 "max_age": 3600
+             }
+         },
+         send_wildcard=True,
+         always_send=True,
+         automatic_options=True  # Automatically handle OPTIONS preflight requests
+    )
     
     
     # Register blueprints
