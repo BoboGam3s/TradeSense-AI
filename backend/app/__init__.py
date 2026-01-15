@@ -2,6 +2,7 @@
 TradeSense AI - Flask Application Factory
 """
 from flask import Flask
+import os
 from flask_cors import CORS
 from app.config import Config
 from app.extensions import db, jwt, migrate, scheduler
@@ -29,6 +30,19 @@ def create_app(config_class=Config):
     app.register_blueprint(alerts.bp, url_prefix='/api/alerts')
     app.register_blueprint(community.bp, url_prefix='/api/community')
     
+    # Create database directory if it's a SQLite URL
+    db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if db_url.startswith('sqlite:///'):
+        db_path = db_url.replace('sqlite:///', '')
+        # Handle instance folder or subdirectories
+        db_dir = os.path.dirname(db_path)
+        if db_dir and not os.path.exists(db_dir):
+            try:
+                os.makedirs(db_dir, exist_ok=True)
+                print(f"Created database directory: {db_dir}")
+            except Exception as e:
+                print(f"Warning: Could not create database directory {db_dir}: {e}")
+
     # Create database tables
     with app.app_context():
         db.create_all()
