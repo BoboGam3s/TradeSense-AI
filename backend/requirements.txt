@@ -8,6 +8,7 @@ Flask-Migrate==4.0.5
 # Database
 SQLAlchemy==2.0.36
 alembic==1.13.1
+psycopg2-binary==2.9.9  # PostgreSQL driver for Render deployment
 
 # Market Data
 yfinance==0.2.33
