@@ -7,6 +7,7 @@ from flask_cors import CORS
 from app.config import Config
 from app.extensions import db, jwt, migrate, scheduler
 from app.routes import auth, trading, challenge, payment, admin, market, alerts, community
+from app.models import User
 
 
 def create_app(config_class=Config):
@@ -43,9 +44,22 @@ def create_app(config_class=Config):
             except Exception as e:
                 print(f"Warning: Could not create database directory {db_dir}: {e}")
 
-    # Create database tables
+    # Create database tables and seed admin if empty
     with app.app_context():
         db.create_all()
+        # Seed admin if no users exist
+        if User.query.count() == 0:
+            print("Database is empty. Seeding admin user...")
+            admin_user = User(
+                email='admin@tradesense.ai',
+                full_name='Admin User',
+                role='admin',
+                language='fr'
+            )
+            admin_user.set_password('admin123')
+            db.session.add(admin_user)
+            db.session.commit()
+            print("Admin user created: admin@tradesense.ai / admin123")
     
     # Start background scheduler for challenge verification
     if not scheduler.running:
