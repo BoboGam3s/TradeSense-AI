@@ -20,7 +20,12 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     migrate.init_app(app, db)
     # Enable CORS for all routes and origins
-    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    # Note: For production, consider restricting origins to your specific domains
+    CORS(app, 
+         resources={r"/*": {"origins": "*"}},
+         allow_headers=["Content-Type", "Authorization"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         supports_credentials=False)  # Changed to False to allow wildcard origin
     
     
     # Register blueprints
@@ -139,3 +144,4 @@ def create_app(config_class=Config):
         return {"error": "Internal Server Error", "details": str(e)}, 500
     
     return app
+
