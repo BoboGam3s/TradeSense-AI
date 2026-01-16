@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev frontend",
-    "build": "next build frontend",
+    "dev": "npm run dev --prefix frontend",
+    "build": "cd frontend && npm install && npm run build && mv .next ../",
     "start": "next start frontend",
     "lint": "next lint frontend"
   },
