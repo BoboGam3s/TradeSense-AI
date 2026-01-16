@@ -1638,7 +1638,7 @@ export default function DashboardPage() {
             {/* VIDEO CARD COMPONENT HELPER (Logical abstraction in JSX) */}
             {[
               {
-                file: "/videos/niveau1.mp4",
+                file: "/videos/niveau2.mp4", // Using smaller video (6MB) because original >100MB
                 level: "NIVEAU 1",
                 title: "Fondamentaux du Trading",
                 desc: "Maîtrisez les bases indispensables pour naviguer sur les marchés financiers avec confiance.",
@@ -1666,7 +1666,7 @@ export default function DashboardPage() {
                 ]
               },
               {
-                file: "/videos/masterclass.mp4",
+                file: "/videos/niveau2.mp4", // Using smaller video (6MB) because original >100MB
                 level: "MASTERCLASS",
                 title: "Gestion du Risque Avancée",
                 desc: "La clé de la survie et de la rentabilité : apprenez à protéger votre capital comme un hedge fund.",
