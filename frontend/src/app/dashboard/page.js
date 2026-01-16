@@ -1687,14 +1687,16 @@ export default function DashboardPage() {
               };
               
               const isPlanLocked = !planGating[idx].includes(user?.plan_type);
-              const isProgressionLocked = academyProgress.stage < idx + 1;
+              const isProgressionLocked = (academyProgress?.stage || 1) < idx + 1;
               const isLocked = isProgressionLocked || isPlanLocked;
               
-              const isCompleted = academyProgress.stage > idx + 1;
+              const isCompleted = (academyProgress?.stage || 1) > idx + 1;
               const currentLvlTasks = video.tasks;
-              const allTasksDone = currentLvlTasks.every(t => academyProgress.completedTasks[t.id]);
-              const videoDone = academyProgress.completedVideos.includes(video.file);
-              const canUnlockNext = videoDone && allTasksDone && academyProgress.stage === idx + 1 && !isPlanLocked;
+              const completedTasksSafe = academyProgress?.completedTasks || {};
+              const allTasksDone = currentLvlTasks.every(t => completedTasksSafe[t.id]);
+              const completedVideosSafe = academyProgress?.completedVideos || [];
+              const videoDone = completedVideosSafe.includes(video.file);
+              const canUnlockNext = videoDone && allTasksDone && (academyProgress?.stage || 1) === idx + 1 && !isPlanLocked;
 
               return (
                 <div key={idx} className={`glass-card border-t-4 ${isLocked ? 'border-gray-700 opacity-60' : `border-neon-${video.color}`} group overflow-hidden flex flex-col h-full transition-all ${!isLocked && 'hover:translate-y-[-4px]'} relative`}>
