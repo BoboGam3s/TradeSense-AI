@@ -44,25 +44,16 @@ def get_leaderboard():
         pipeline = [
             # 1. Match active/passed challenges
             {'$match': {'status': {'$in': ['active', 'passed']}}},
-            # 2. Add Profit Percent Field
-            {'$addFields': {
-                'profit_raw': {
-                    '$multiply': [
-                        {'$divide': [{'$subtract': ['$current_equity', '$initial_balance']}, '$initial_balance']},
-                        100
-                    ]
-                }
-            }},
-            # 3. Sort by Profit Percent to get best per user first
-            {'$sort': {'profit_raw': -1}},
-            # 4. Group by user_id to get only their best challenge
+            # 2. Sort by equity to get best per user first
+            {'$sort': {'current_equity': -1}},
+            # 3. Group by user_id to get only their best challenge
             {'$group': {
                 '_id': '$user_id',
                 'best_challenge': {'$first': '$$ROOT'}
             }},
-            # 5. Sort again by best profit
-            {'$sort': {'best_challenge.profit_raw': -1}},
-            # 6. Take top 10
+            # 4. Sort again by best profit
+            {'$sort': {'best_challenge.current_equity': -1}},
+            # 5. Take top 10
             {'$limit': 10}
         ]
         
