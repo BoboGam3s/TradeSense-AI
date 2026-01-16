@@ -8,7 +8,11 @@ import { AuthService } from '../../lib/auth';
 import { FiCheck, FiCreditCard, FiLock, FiTrendingUp, FiArrowLeft } from 'react-icons/fi';
 import { FaPaypal, FaBitcoin } from 'react-icons/fa';
 
-const COUNTRIES = ['Maroc', 'France', 'Belgique', 'Suisse', 'Canada', 'Autre'];
+const COUNTRIES = [
+  'Maroc', 'France', 'Belgique', 'Suisse', 'Canada', 'États-Unis', 'Royaume-Uni', 
+  'Allemagne', 'Espagne', 'Italie', 'Pays-Bas', 'Sénégal', 'Côte d\'Ivoire', 
+  'Émirats arabes unis', 'Arabie saoudite', 'Tunisie', 'Algérie', 'Autre'
+];
 
 // Helper component to load PayPal SDK stably
 function PayPalLoader({ amount, onSuccess }) {
@@ -289,16 +293,13 @@ export default function CheckoutPage() {
     <div className="min-h-screen py-12 px-4">
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-8 relative z-50">
-        <button 
-          onClick={() => {
-            console.log("Navigating back to pricing...");
-            router.push('/pricing');
-          }}
+        <Link
+          href="/pricing"
           className="inline-flex items-center space-x-2 mb-6 text-gray-400 hover:text-neon-green transition-all cursor-pointer group px-4 py-2 rounded-lg hover:bg-white/5 active:scale-95 pointer-events-auto"
         >
           <FiArrowLeft className="text-xl group-hover:-translate-x-1 transition-transform" />
           <span className="font-bold">Retour aux Plans</span>
-        </button>
+        </Link>
 
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2">
@@ -473,7 +474,7 @@ export default function CheckoutPage() {
                         onChange={handleInputChange}
                       >
                         {COUNTRIES.map(country => (
-                          <option key={country} value={country}>{country}</option>
+                          <option key={country} value={country} className="text-black">{country}</option>
                         ))}
                       </select>
                     </div>
