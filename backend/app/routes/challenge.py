@@ -60,23 +60,63 @@ def get_leaderboard():
         results = list(mongo.db.challenges.aggregate(pipeline))
         leaderboard_data = []
         
-        for idx, item in enumerate(results, start=1):
+        # 1. Process Real Users
+        for item in results:
             challenge_doc = item['best_challenge']
             challenge = Challenge(**challenge_doc)
             user_doc = mongo.db.users.find_one({'_id': ObjectId(challenge.user_id)})
             
+            # Recalculate profit percent dynamically if needed
+            profit = challenge.calculate_profit_percent()
+            
             leaderboard_data.append({
-                'rank': idx,
+                'is_real': True,
                 'user_name': user_doc.get('full_name', 'Unknown') if user_doc else 'Unknown',
-                'profit_percent': round(challenge.calculate_profit_percent(), 2),
+                'profit_percent': round(profit, 2),
                 'total_profit': round(challenge.calculate_total_profit(), 2),
                 'plan_type': challenge.plan_type,
                 'status': challenge.status
             })
+
+        # 2. Generate Mock Moroccan Users (to fill up to 10 slots)
+        import random
+        mock_names = [
+            "Amine T.", "Yassine B.", "Hassan El-G", "Mehdi FX", "Omar Pips", 
+            "Karim Invest", "Sara Trade", "Mouna Stocks", "Tarik Scalp", "Reda Algo",
+            "Nabil C.", "Sofia M.", "Leila K.", "Driss H."
+        ]
+        
+        # Determine how many mock users we need (at least enough to make a full top 10, or more to compete)
+        # We generate 10 mock users with random realistic stats to compete with real users
+        mock_users = []
+        for name in mock_names:
+            mock_profit = random.uniform(3.5, 12.0) # Realistic returns between 3.5% and 12%
+            mock_users.append({
+                'is_real': False,
+                'user_name': name,
+                'profit_percent': round(mock_profit, 2),
+                'total_profit': round(mock_profit * 1000, 2), # Approx based on 100k account
+                'plan_type': 'funded' if mock_profit > 8 else 'challenge',
+                'status': 'active'
+            })
+            
+        # 3. Merge & Sort
+        # We combine ALL real users + Mock users
+        combined_board = leaderboard_data + mock_users
+        
+        # Sort by Profit Percent Descending
+        combined_board.sort(key=lambda x: x['profit_percent'], reverse=True)
+        
+        # 4. Take Top 10
+        final_leaderboard = combined_board[:10]
+        
+        # 5. Add Rank
+        for idx, entry in enumerate(final_leaderboard, 1):
+            entry['rank'] = idx
         
         return jsonify({
-            'leaderboard': leaderboard_data,
-            'total_traders': len(leaderboard_data)
+            'leaderboard': final_leaderboard,
+            'total_traders': len(leaderboard_data) # Return count of REAL traders as total
         }), 200
     except Exception as e:
         print(f"Error in leaderboard aggregation: {e}")
