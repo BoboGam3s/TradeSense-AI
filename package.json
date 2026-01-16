@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "npm run dev --prefix frontend",
-    "build": "cd frontend && npm install && npm run build && mv .next ../",
+    "build": "cd frontend && npm install && npm run build && cp -r .next ../",
     "start": "next start frontend",
     "lint": "next lint frontend"
   },
