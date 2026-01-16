@@ -4,28 +4,18 @@
  */
 import axios from 'axios';
 
-// Base URL for API requests
-let API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tradesense-backend-q2ul.onrender.com';
+// On Vercel, the API is served from the same domain under /api
+// Locally, it's usually http://localhost:5000/api
+let API_URL = '/api';
 
-// Ensure we don't end up with double /api prefixes
-// Our endpoints now DO NOT include /api as we move it to the base URL
-if (API_URL === '/api' || API_URL === '/api/') {
-  API_URL = '/api';
-} else if (!API_URL.endsWith('/api') && !API_URL.endsWith('/api/')) {
-  // If it's a full URL like localhost:5000, we add /api
-  API_URL = API_URL.endsWith('/') ? API_URL + 'api' : API_URL + '/api';
-}
-
-// Local dev override
 if (typeof window !== 'undefined') {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    if (!process.env.NEXT_PUBLIC_API_URL) {
-      API_URL = 'http://localhost:5000/api';
-    }
+    API_URL = 'http://localhost:5000/api';
   }
 }
 
 // Create axios instance
+// NOTE: All endpoints below DO NOT start with /api because baseURL handles it
 const api = axios.create({
   baseURL: API_URL,
   headers: {
