@@ -77,8 +77,12 @@ def register():
     }), 201
 
 
-@bp.route('/login', methods=['POST'])
+@bp.route('/login', methods=['GET', 'POST', 'OPTIONS'])
 def login():
+    """Login user"""
+    if request.method != 'POST':
+        return jsonify({'message': 'Login endpoint ready. Please send a POST request with credentials.'}), 200
+
     """Login user"""
     data = request.get_json()
     

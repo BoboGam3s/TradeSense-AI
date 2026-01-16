@@ -107,5 +107,11 @@ def create_app(config_class=Config):
         traceback.print_exc()
         return {"error": "Internal Server Error", "details": str(e)}, 500
     
+    # Debug: Print all registered routes
+    with app.app_context():
+        print("DEBUG: Registered Routes:")
+        for rule in app.url_map.iter_rules():
+            print(f"DEBUG: {rule} methods={rule.methods}")
+
     return app
 
