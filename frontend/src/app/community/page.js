@@ -29,7 +29,7 @@ export default function CommunityPage() {
 
   // Fetch online traders
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/community/users`)
+    fetch('/api/community/users')
       .then(res => res.json())
       .then(data => setOnlineTraders(data))
       .catch(err => console.error("Failed to fetch community users", err));
