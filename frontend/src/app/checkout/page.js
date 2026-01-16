@@ -293,15 +293,18 @@ export default function CheckoutPage() {
     <div className="min-h-screen py-12 px-4">
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-8 relative z-50">
-        <div className="relative z-[100] inline-block">
-          <Link
-            href="/pricing"
-            className="inline-flex items-center space-x-2 mb-6 text-gray-400 hover:text-neon-green transition-all cursor-pointer group px-4 py-2 rounded-lg hover:bg-white/5 active:scale-95"
-          >
-            <FiArrowLeft className="text-xl group-hover:-translate-x-1 transition-transform" />
-            <span className="font-bold">Retour aux Plans</span>
-          </Link>
-        </div>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = '/pricing';
+          }}
+          type="button"
+          className="relative z-[9999] inline-flex items-center space-x-2 mb-6 text-gray-400 hover:text-neon-green transition-all cursor-pointer group px-4 py-2 rounded-lg hover:bg-white/5 active:scale-95 pointer-events-auto"
+        >
+          <FiArrowLeft className="text-xl group-hover:-translate-x-1 transition-transform" />
+          <span className="font-bold">Retour aux Plans</span>
+        </button>
 
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2">
