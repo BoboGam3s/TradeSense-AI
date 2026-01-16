@@ -20,18 +20,25 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     # Enable CORS for all routes and origins
     # Configure CORS to handle preflight OPTIONS requests properly
+    # Configure CORS with safe origins (no invalid regex)
+    # allow_origin_regex is safer for wildcards if needed, but explicit list is best.
     CORS(app, 
          resources={
-             r"/*": {
-                 "origins": ["http://localhost:3000", "http://127.0.0.1:3000", "*.onrender.com", "*.vercel.app"],
+             r"/api/*": {
+                 "origins": [
+                     "http://localhost:3000", 
+                     "http://127.0.0.1:3000", 
+                     "https://trade-sense-ai.vercel.app",
+                     r"https://.*\.vercel\.app"  # Valid Regex for all Vercel previews
+                 ],
                  "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                 "allow_headers": ["Content-Type", "Authorization"],
+                 "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
                  "expose_headers": ["Content-Type", "Authorization"],
                  "max_age": 3600
              }
          },
          supports_credentials=True,
-         send_wildcard=False, # Must be False for credentials with specific origins
+         send_wildcard=False,
          always_send=True,
          automatic_options=True
     )
