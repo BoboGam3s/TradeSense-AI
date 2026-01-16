@@ -1815,7 +1815,7 @@ export default function DashboardPage() {
                     <div className="bg-white/5 rounded-xl p-4 space-y-3 border border-white/5">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Objectifs Pratiques</span>
-                            <span className="text-[10px] text-neon-blue font-bold">{currentLvlTasks.filter(t => academyProgress.completedTasks[t.id]).length}/{currentLvlTasks.length}</span>
+                            <span className="text-[10px] text-neon-blue font-bold">{currentLvlTasks.filter(t => completedTasksSafe[t.id]).length}/{currentLvlTasks.length}</span>
                         </div>
                         {currentLvlTasks.map(task => (
                             <div 
@@ -1823,14 +1823,15 @@ export default function DashboardPage() {
                                 className={`flex items-center space-x-3 p-2 rounded-lg transition-colors cursor-pointer ${isLocked ? 'pointer-events-none opacity-50' : 'hover:bg-white/5'}`}
                                 onClick={() => {
                                     if (isLocked) return;
-                                    const newTasks = { ...academyProgress.completedTasks, [task.id]: !academyProgress.completedTasks[task.id] };
-                                    saveProgress({ ...academyProgress, completedTasks: newTasks });
+                                    const currentTasks = academyProgress?.completedTasks || {};
+                                    const newTasks = { ...currentTasks, [task.id]: !currentTasks[task.id] };
+                                    saveProgress({ ...(academyProgress || {}), completedTasks: newTasks, stage: academyProgress?.stage || 1, completedVideos: academyProgress?.completedVideos || [] });
                                 }}
                             >
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${academyProgress.completedTasks[task.id] ? 'bg-neon-blue border-neon-blue shadow-[0_0_10px_rgba(0,243,255,0.3)]' : 'border-white/20 bg-white/5'}`}>
-                                    {academyProgress.completedTasks[task.id] && <FiCheck className="text-black text-xs font-bold" />}
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${completedTasksSafe[task.id] ? 'bg-neon-blue border-neon-blue shadow-[0_0_10px_rgba(0,243,255,0.3)]' : 'border-white/20 bg-white/5'}`}>
+                                    {completedTasksSafe[task.id] && <FiCheck className="text-black text-xs font-bold" />}
                                 </div>
-                                <span className={`text-xs font-medium ${academyProgress.completedTasks[task.id] ? 'text-white line-through opacity-50' : 'text-gray-300'}`}>
+                                <span className={`text-xs font-medium ${completedTasksSafe[task.id] ? 'text-white line-through opacity-50' : 'text-gray-300'}`}>
                                     {task.label}
                                 </span>
                             </div>
@@ -1840,7 +1841,7 @@ export default function DashboardPage() {
                     {/* UNLOCK NEXT BUTTON */}
                     {canUnlockNext && (
                         <button 
-                            onClick={() => saveProgress({ ...academyProgress, stage: idx + 2 })}
+                            onClick={() => saveProgress({ ...(academyProgress || {}), stage: idx + 2, completedTasks: completedTasksSafe, completedVideos: completedVideosSafe })}
                             className={`w-full py-3 rounded-xl bg-gradient-to-r from-neon-blue to-blue-600 text-black font-black uppercase tracking-widest text-xs mt-4 shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:scale-[1.02] transition-all`}
                         >
                             Débloquer le {idx === 0 ? 'Niveau 2' : 'Masterclass'} 🔓
