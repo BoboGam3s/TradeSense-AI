@@ -178,6 +178,17 @@ export default function DashboardPage() {
     }
     const userData = AuthService.getUser();
     setUser(userData);
+
+    // Force refresh user profile from server to ensure plan is up to date (e.g. after payment)
+    authAPI.getProfile()
+      .then(response => {
+        if (response.data.user) {
+          console.log("Profile synced:", response.data.user.plan_type);
+          setUser(response.data.user);
+          AuthService.setUser(response.data.user);
+        }
+      })
+      .catch(err => console.error("Failed to sync profile:", err));
     
     // Safety timeout: ensure loading screen disappears after 6s no matter what
     const timer = setTimeout(() => {
