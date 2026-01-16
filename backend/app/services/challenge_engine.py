@@ -23,7 +23,7 @@ class ChallengeEngine:
         
         challenge = Challenge(**challenge_doc)
         
-        if challenge.status != 'active':
+        if challenge.status not in ['active', 'passed']:
             return {'status': 'skipped', 'reason': f'Challenge status is {challenge.status}'}
         
         max_daily_loss = challenge.max_daily_loss_percent
@@ -170,7 +170,8 @@ def verify_all_active_challenges():
     from app import create_app
     app = create_app()
     with app.app_context():
-        active_cursor = mongo.db.challenges.find({'status': 'active'})
+        # Monitor both active and passed challenges (to catch drawdowns after passing)
+        active_cursor = mongo.db.challenges.find({'status': {'$in': ['active', 'passed']}})
         for challenge_doc in active_cursor:
             try:
                 ChallengeEngine.verify_challenge_rules(str(challenge_doc['_id']))
