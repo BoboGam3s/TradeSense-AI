@@ -1692,6 +1692,7 @@ export default function DashboardPage() {
               
               const isCompleted = (academyProgress?.stage || 1) > idx + 1;
               const currentLvlTasks = video.tasks;
+              console.log("Academy Debug:", { stage: academyProgress?.stage, tasks: academyProgress?.completedTasks });
               const completedTasksSafe = academyProgress?.completedTasks || {};
               const allTasksDone = currentLvlTasks.every(t => completedTasksSafe[t.id]);
               const completedVideosSafe = academyProgress?.completedVideos || [];
