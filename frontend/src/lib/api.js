@@ -7,17 +7,20 @@ import axios from 'axios';
 // Base URL for API requests
 let API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tradesense-backend-q2ul.onrender.com';
 
-// If API_URL is strictly '/api', we set it to empty string 
-// because our endpoint definitions already start with '/api/'
-if (API_URL === '/api') {
-  API_URL = '';
+// Ensure we don't end up with double /api prefixes
+// Our endpoints now DO NOT include /api as we move it to the base URL
+if (API_URL === '/api' || API_URL === '/api/') {
+  API_URL = '/api';
+} else if (!API_URL.endsWith('/api') && !API_URL.endsWith('/api/')) {
+  // If it's a full URL like localhost:5000, we add /api
+  API_URL = API_URL.endsWith('/') ? API_URL + 'api' : API_URL + '/api';
 }
 
 // Local dev override
 if (typeof window !== 'undefined') {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     if (!process.env.NEXT_PUBLIC_API_URL) {
-      API_URL = 'http://localhost:5000';
+      API_URL = 'http://localhost:5000/api';
     }
   }
 }
@@ -59,66 +62,66 @@ api.interceptors.response.use(
 );
 
 export const alertsAPI = {
-  getAlerts: () => api.get('/api/alerts'),
-  createAlert: (data) => api.post('/api/alerts', data),
-  deleteAlert: (id) => api.delete(`/api/alerts/${id}`),
+  getAlerts: () => api.get('/alerts'),
+  createAlert: (data) => api.post('/alerts', data),
+  deleteAlert: (id) => api.delete(`/alerts/${id}`),
 };
 
 export default api;
 
 // API endpoints
 export const authAPI = {
-  register: (data) => api.post('/api/auth/register', data),
-  login: (data) => api.post('/api/auth/login', data),
-  getProfile: () => api.get('/api/auth/me'),
-  updateProfile: (data) => api.put('/api/auth/me', data),
-  changePassword: (data) => api.put('/api/auth/change-password', data),
-  getStats: () => api.get('/api/auth/stats'),
-  updateAcademyProgress: (progress) => api.put('/api/auth/academy-progress', { progress }),
-  completeOnboarding: () => api.post('/api/auth/complete-onboarding'),
+  register: (data) => api.post('/auth/register', data),
+  login: (data) => api.post('/auth/login', data),
+  getProfile: () => api.get('/auth/me'),
+  updateProfile: (data) => api.put('/auth/me', data),
+  changePassword: (data) => api.put('/auth/change-password', data),
+  getStats: () => api.get('/auth/stats'),
+  updateAcademyProgress: (progress) => api.put('/auth/academy-progress', { progress }),
+  completeOnboarding: () => api.post('/auth/complete-onboarding'),
 };
 
 export const marketAPI = {
-  getSymbols: () => api.get('/api/market/symbols'),
-  getPrice: (symbol) => api.get(`/api/market/price/${symbol}`),
-  getBatchPrices: (symbols) => api.post('/api/market/prices/batch', { symbols }),
-  getHistorical: (symbol, period = '1mo', interval = '1d') => api.get(`/api/market/historical/${symbol}?period=${period}&interval=${interval}`),
-  getAISignal: (symbol) => api.get(`/api/market/ai-signal/${symbol}`),
-  getMarketSummary: () => api.get('/api/market/market-summary'),
-  getNews: () => api.get('/api/market/news'),
+  getSymbols: () => api.get('/market/symbols'),
+  getPrice: (symbol) => api.get(`/market/price/${symbol}`),
+  getBatchPrices: (symbols) => api.post('/market/prices/batch', { symbols }),
+  getHistorical: (symbol, period = '1mo', interval = '1d') => api.get(`/market/historical/${symbol}?period=${period}&interval=${interval}`),
+  getAISignal: (symbol) => api.get(`/market/ai-signal/${symbol}`),
+  getMarketSummary: () => api.get('/market/market-summary'),
+  getNews: () => api.get('/market/news'),
 };
 
 export const tradingAPI = {
-  getPortfolio: () => api.get('/api/trading/portfolio'),
-  executeTrade: (data) => api.post('/api/trading/execute', data),
-  closePosition: (tradeId, price = null) => api.post('/api/trading/close', { trade_id: tradeId, price: price }),
-  closeAllPositions: () => api.post('/api/trading/close-all'),
-  getHistory: () => api.get('/api/trading/history'),
-  getPerformanceAnalysis: (config = {}) => api.post('/api/trading/performance-analysis', {}, config),
-  getStats: () => api.get('/api/trading/stats'),
-  updateJournal: (tradeId, data) => api.put(`/api/trading/trades/${tradeId}/journal`, data),
-  reset: () => api.post('/api/trading/reset'),
+  getPortfolio: () => api.get('/trading/portfolio'),
+  executeTrade: (data) => api.post('/trading/execute', data),
+  closePosition: (tradeId, price = null) => api.post('/trading/close', { trade_id: tradeId, price: price }),
+  closeAllPositions: () => api.post('/trading/close-all'),
+  getHistory: () => api.get('/trading/history'),
+  getPerformanceAnalysis: (config = {}) => api.post('/trading/performance-analysis', {}, config),
+  getStats: () => api.get('/trading/stats'),
+  updateJournal: (tradeId, data) => api.put(`/trading/trades/${tradeId}/journal`, data),
+  reset: () => api.post('/trading/reset'),
 };
 
 export const challengeAPI = {
-  getCurrent: () => api.get('/api/challenge/current'),
-  getHistory: () => api.get('/api/challenge/history'),
-  getLeaderboard: () => api.get('/api/challenge/leaderboard'),
-  verify: (id) => api.post(`/api/challenge/verify/${id}`),
+  getCurrent: () => api.get('/challenge/current'),
+  getHistory: () => api.get('/challenge/history'),
+  getLeaderboard: () => api.get('/challenge/leaderboard'),
+  verify: (id) => api.post(`/challenge/verify/${id}`),
 };
 
 export const paymentAPI = {
-  getPlans: () => api.get('/api/payment/plans'),
-  mockPayment: (data) => api.post('/api/payment/mock-payment', data),
-  createPayPalOrder: (data) => api.post('/api/payment/paypal/create-order', data),
-  capturePayPalOrder: (data) => api.post('/api/payment/paypal/capture-order', data),
+  getPlans: () => api.get('/payment/plans'),
+  mockPayment: (data) => api.post('/payment/mock-payment', data),
+  createPayPalOrder: (data) => api.post('/payment/paypal/create-order', data),
+  capturePayPalOrder: (data) => api.post('/payment/paypal/capture-order', data),
 };
 
 export const adminAPI = {
-  getUsers: () => api.get('/api/admin/users'),
-  getChallenges: () => api.get('/api/admin/challenges'),
-  updateChallengeStatus: (id, status) => api.put(`/api/admin/challenge/${id}/status`, { status }),
-  getPaymentConfig: () => api.get('/api/admin/payment-config'),
-  updatePaymentConfig: (data) => api.put('/api/admin/payment-config', data),
-  getStats: () => api.get('/api/admin/stats'),
+  getUsers: () => api.get('/admin/users'),
+  getChallenges: () => api.get('/admin/challenges'),
+  updateChallengeStatus: (id, status) => api.put(`/admin/challenge/${id}/status`, { status }),
+  getPaymentConfig: () => api.get('/admin/payment-config'),
+  updatePaymentConfig: (data) => api.put('/admin/payment-config', data),
+  getStats: () => api.get('/admin/stats'),
 };
