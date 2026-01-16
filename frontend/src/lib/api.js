@@ -7,6 +7,12 @@ import axios from 'axios';
 // Base URL for API requests
 let API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tradesense-backend-q2ul.onrender.com';
 
+// If API_URL is strictly '/api', we set it to empty string 
+// because our endpoint definitions already start with '/api/'
+if (API_URL === '/api') {
+  API_URL = '';
+}
+
 // Local dev override
 if (typeof window !== 'undefined') {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
