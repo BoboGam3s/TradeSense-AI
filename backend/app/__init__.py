@@ -5,7 +5,7 @@ from flask import Flask
 import os
 from flask_cors import CORS
 from app.config import Config
-from app.extensions import db, jwt, migrate, scheduler
+from app.extensions import mongo, jwt, scheduler
 from app.routes import auth, trading, challenge, payment, admin, market, alerts, community
 from app.models import User
 
